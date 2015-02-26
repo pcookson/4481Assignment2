@@ -11,7 +11,7 @@ struct node
 
 long int *generate_pixel_frequency(struct PGM_Image *input_pgm_image, int *number_of_non_zero_values_in_the_frequency_array)
 {
-    //long int *frequencyArray = malloc((input_pgm_image->maxGrayValue+1) * sizeof(frequencyArray));
+
     int i;
     int width;
     int height;
@@ -51,24 +51,29 @@ long int *generate_pixel_frequency(struct PGM_Image *input_pgm_image, int *numbe
 
 struct node *generate_Huffman_nodes(long int *pixel_frequency, int max_gray_value, int number_of_non_zero_values_in_the_frequency_array)
 {
+    printf("Huffman Nodes: \n");
+
+    int test;
+
     //go through frequency array. Find two smallest, largest of the smallest goes in first value, the other second value. Assign the larger entry in frequency array as 0, store combined value in  seconds place
     int first;
     int second;
     int temp;
 
+    int firstBefore = -1;
 
 
     int j;
     int i;
     struct node *nodes = malloc((number_of_non_zero_values_in_the_frequency_array-1) * sizeof(nodes));
 
-
-
+    second = -1;
+    first = -1;
     for(i=0; i<number_of_non_zero_values_in_the_frequency_array-1; i++)
     {
 
-        second = -1;
-        first = -1;
+
+
         //find second
         for(j=0; j<max_gray_value+1; j++)
         {
@@ -80,7 +85,7 @@ struct node *generate_Huffman_nodes(long int *pixel_frequency, int max_gray_valu
                 }
                 else
                 {
-                    if(pixel_frequency[j] < pixel_frequency[second])
+                    if(pixel_frequency[j] <= pixel_frequency[second])
                     {
                         second = j;
                     }
@@ -96,7 +101,7 @@ struct node *generate_Huffman_nodes(long int *pixel_frequency, int max_gray_valu
                 {
                     first = j;
                 }
-                else if(j!=second)
+                else
                 {
                     if(pixel_frequency[j] <=pixel_frequency[first])
                     {
@@ -106,32 +111,38 @@ struct node *generate_Huffman_nodes(long int *pixel_frequency, int max_gray_valu
             }
 
         }
-        //printf("%lu %lu\n", pixel_frequency[first],pixel_frequency[second]);
 
-        //printf("%lu %lu %d %d\n", pixel_frequency[first], pixel_frequency[second],first, second);
+
+        //make first be the lower index
+        if(first > second)
+        {
+
+
+            temp = first;
+            first = second;
+            second = temp;
+        }
+
 
         pixel_frequency[first] = pixel_frequency[second] + pixel_frequency[first];
         pixel_frequency[second] = 0;
 
 
+        printf("%d %d\n", first, second);
 
-        //printf("%d %d\n", first, second);
-        //printf("%d\n", second);
 
         nodes[i].first_value = first;
         nodes[i].second_value = second;
+        firstBefore = first;
+        //resest heads
+        second = -1;
+        first = -1;
 
     }
 
 
-
-
-
     return nodes;
 }
-
-
-
 
 
 unsigned char *Huffman_encode(struct PGM_Image *input_pgm_image, struct node *Huffman_node, int number_of_nodes, unsigned long int *length_of_encoded_array)
@@ -142,46 +153,43 @@ unsigned char *Huffman_encode(struct PGM_Image *input_pgm_image, struct node *Hu
     int j;
     int width;
     int height;
+
+
     *length_of_encoded_array = input_pgm_image->height * input_pgm_image->width;
     unsigned char *encodedImage = malloc(*length_of_encoded_array * sizeof(unsigned char));
     unsigned char *huffmanArray = malloc((input_pgm_image->maxGrayValue + 1) * sizeof(unsigned char));
 
     for(i=0; i<input_pgm_image->maxGrayValue+1; i++)
     {
-        huffmanArray[i] = -1;
+        huffmanArray[i] = '-';
+
     }
 
     for(i=number_of_nodes-1; i>=0; i--)
     {
-        if(huffmanArray[Huffman_node[i].first_value] == -1)
+        if(huffmanArray[i] == '-')
         {
+
             huffmanArray[Huffman_node[i].first_value] = 0;
+
         }
         else
         {
-            huffmanArray[Huffman_node[i].second_value] = (huffmanArray[Huffman_node[i].first_value] << 1) + 1;
+            huffmanArray[Huffman_node[i].second_value] = (huffmanArray[Huffman_node[i].first_value] << 1) | 1;
             huffmanArray[Huffman_node[i].first_value] = huffmanArray[Huffman_node[i].first_value] << 1;
         }
 
-        if(huffmanArray[Huffman_node[i].second_value] == -1)
+        if(huffmanArray[Huffman_node[i].second_value] == '-')
         {
-            huffmanArray[Huffman_node[i].second_value] = (huffmanArray[Huffman_node[i].first_value] << 1) + 1;
-        }else
+            huffmanArray[Huffman_node[i].second_value] = (huffmanArray[Huffman_node[i].first_value] << 1) | 1;
+        }
+        else
         {
             (huffmanArray[Huffman_node[i].second_value] << 1) + 1;
         }
 
-
-
     }
 
-//    for(j=0; j<input_pgm_image->maxGrayValue+1; j++)
-//        {
-//            if(huffmanArray[j] != -1)
-//            {
-//                printf("%d %d\n", huffmanArray[j], j);
-//            }
-//        }
 
 
 
@@ -205,20 +213,20 @@ void store_Huffman_encoded_data(unsigned char *compressed_file_name_ptr, int ima
     long int index;
     int i;
     FILE *f = fopen(compressed_file_name_ptr, "w");
-    if(f == NULL){
+    if(f == NULL)
+    {
         printf("Error printing file\n");
         exit(1);
     }
 
-//    fprintf(f,"%d\n", image_width);
-//    fprintf(f,"%d\n", image_height);
-//    fprintf(f,"%d\n", max_gray_value);
-//    fprintf(f,"%d\n", number_of_nodes);
-//    fprintf(f,"%lu\n", length_of_encoded_image);
-//    for(i=0;i<number_of_nodes; i++){
-//        fprintf(f,"%d %d\n", Huffman_node[i].first_value, Huffman_node[i].second_value);
-//    }
-    fprintf(f,"%s\n", encoded_image);
+    fprintf(f,"%d\n", image_width);
+    fprintf(f,"%d\n", image_height);
+    fprintf(f,"%d\n", max_gray_value);
+    fprintf(f,"%d\n", number_of_nodes);
+    fprintf(f,"%lu\n", length_of_encoded_image);
+
+    fwrite(encoded_image, 1, sizeof(encoded_image), f);
+
     fclose(f);
 
 
@@ -237,11 +245,6 @@ int main(int argc, char *argv[])
     struct PGM_Image pgmImage;
 
     int number_of_non_zero_values_in_the_frequency_array = 0;
-
-
-
-
-
 
     if(argc!=3)
     {
